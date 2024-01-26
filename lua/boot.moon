@@ -1,7 +1,5 @@
 socket = require "socket"
-moonscript = require "moonscript.base"
--- import dump from "xi.moondump"
--- require "moon.all"
+yue = require "yue"
 for k, v in pairs(require "xi")
   _G[k] = v
 
@@ -9,16 +7,17 @@ clock = DefaultClock
 clock\start!
 host = "*"
 port = 8080
-s = assert(socket.bind(host, port))
+s = socket.bind(host, port)
 i, p = s\getsockname!
-assert(i, p)
-c = assert(s\accept!)
-c\settimeout(0.001)
+-- assert(i, p)
+c = s\accept!
+c\settimeout(0.00000000000001)
 print("Connected to Xi")
 
 getstring = (a) ->
   if a
-    func, err = moonscript.loadstring(a)
+    lua_code = yue.to_lua(a)
+    func, err = loadstring(lua_code)
     if func
       ok, res = pcall(func)
       if ok
@@ -30,9 +29,10 @@ getstring = (a) ->
 
 listen = (client) ->
   l, e = client\receive()
+  getstring(l)
   while not e do
-    getstring(l)
     l, e = client\receive()
+    getstring(l)
 
 while coroutine.resume(clock.notifyCoroutine)
   listen(c)
