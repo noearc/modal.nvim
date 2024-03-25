@@ -1,5 +1,4 @@
 local xi = require("nvim-xi")
-require("moon.all")
 vim.api.nvim_create_user_command("XiStart", function()
 	xi.launch_xi({})
 	vim.keymap.set({ "n", "i", "v" }, "<C-e>", ":lua require'nvim-xi'.send_block()<CR>", {})
