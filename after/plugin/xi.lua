@@ -1,0 +1,6 @@
+local xi = require("nvim-xi")
+vim.api.nvim_create_user_command("XiStart", function(opts)
+	xi.init(opts.args)
+	vim.keymap.set({ "n", "i", "v" }, "<C-e>", ":lua require'nvim-xi'.send_block()<CR>", {})
+	vim.keymap.set({ "n", "i", "v" }, "<C-a>", ":lua require'nvim-xi'.send_all()<CR>", {})
+end, { nargs = "?" })
