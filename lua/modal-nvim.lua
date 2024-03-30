@@ -1,13 +1,11 @@
 local M = {}
-require("moon.all")
+-- require("moon.all")
 local yue = require("yue")
 
--- vim.highlight.range(0, 0, "", { 0, 0 }, { 1, 1 })
---
 local DEFAULTS = {
 	-- boot = {
-	-- 	tidal = {
-	-- 		file = vim.api.nvim_get_runtime_file("BootTidal.hs", false)[1],
+	-- 	modal = {
+	-- 	mo	file = vim.api.nvim_get_runtime_file("BootTidal.hs", false)[1],
 	-- 		args = {},
 	-- 	},
 	-- 	sclang = {
@@ -39,7 +37,7 @@ local KEYMAPS = {
 	-- 	},
 	send_visual = {
 		mode = "v",
-		action = "y<cmd>lua require('nvim-xi').send_reg()<CR>",
+		action = "y<cmd>lua require('nvim-modal').send_reg()<CR>",
 		description = "send selection to Tidal",
 	},
 	-- 	hush = {
@@ -53,20 +51,20 @@ local KEYMAPS = {
 
 local state = {
 	launched = false,
-	xi = nil,
+	modal = nil,
 	sclang = nil,
-	xi_process = nil,
+	modal_process = nil,
 	sclang_process = nil,
 }
 
 local function send(text)
 	print(text)
-	if not state.xi_process then
+	if not state.modal_process then
 		print("no proc")
 		return
 	end
 	text = yue.to_lua(text)
-	vim.api.nvim_chan_send(state.xi_process, text .. "\n")
+	vim.api.nvim_chan_send(state.modal_process, text .. "\n")
 end
 
 function M.send_current_line()
@@ -118,27 +116,27 @@ function M.send_reg(register)
 	send(text)
 end
 
-local function boot_xi(args)
-	if state.xi then
-		local ok = pcall(vim.api.nvim_set_current_buf, state.xi)
+local function boot_modal(args)
+	if state.modal then
+		local ok = pcall(vim.api.nvim_set_current_buf, state.modal)
 		if not ok then
-			state.xi = nil
-			boot_xi(args)
+			state.modal = nil
+			boot_modal(args)
 			return
 		end
 	else
-		state.xi = vim.api.nvim_create_buf(false, false)
-		boot_xi(args)
+		state.modal = vim.api.nvim_create_buf(false, false)
+		boot_modal(args)
 		return
 	end
-	state.xi_process = vim.fn.termopen("xi", {
-		on_exit = function()
-			if #vim.fn.win_findbuf(state.xi) > 0 then
-				vim.api.nvim_win_close(vim.fn.win_findbuf(state.xi)[1], true)
+	state.modal_process = vim.fn.termopen("modal", {
+		on_emodalt = function()
+			if #vim.fn.win_findbuf(state.modal) > 0 then
+				vim.api.nvim_win_close(vim.fn.win_findbuf(state.modal)[1], true)
 			end
-			vim.api.nvim_buf_delete(state.xi, {})
-			state.xi = nil
-			state.xi_process = nil
+			vim.api.nvim_buf_delete(state.modal, {})
+			state.modal = nil
+			state.modal_process = nil
 		end,
 	})
 end
@@ -156,24 +154,24 @@ local function boot_sclang(args)
 		return
 	end
 	state.sclang_process = vim.fn.termopen("sclang", {
-		on_exit = function()
+		on_emodalt = function()
 			if #vim.fn.win_findbuf(state.sclang) > 0 then
 				vim.api.nvim_win_close(vim.fn.win_findbuf(state.sclang)[1], true)
 			end
-			vim.api.nvim_buf_delete(state.sclang)
+			vim.api.nvim_buf_delete(state.sclang, {})
 			state.sclang = nil
 			state.sclang_process = nil
 		end,
 	})
 end
 
-function M.launch_xi(args)
+local function launch_modal(args)
 	local current_win = vim.api.nvim_get_current_win()
 	if state.launched then
 		return
 	end
 	vim.cmd(args.split == "v" and "vsplit" or "split")
-	boot_xi(args.xi)
+	boot_modal(args.modal)
 	vim.cmd(args.split == "v" and "split" or "vsplit")
 	boot_sclang({})
 	vim.api.nvim_set_current_win(current_win)
@@ -182,18 +180,18 @@ function M.launch_xi(args)
 end
 
 -- TODO:
--- local function exit_tidal()
--- 	if not state.launched then
--- 		return
--- 	end
--- 	if state.tidal_process then
--- 		vim.fn.jobstop(state.tidal_process)
--- 	end
--- 	if state.sclang_process then
--- 		vim.fn.jobstop(state.sclang_process)
--- 	end
--- 	state.launched = false
--- end
+local function exit()
+	if not state.launched then
+		return
+	end
+	if state.tidal_process then
+		vim.fn.jobstop(state.modal_process)
+	end
+	if state.sclang_process then
+		vim.fn.jobstop(state.sclang_process)
+	end
+	state.launched = false
+end
 
 -- TODO:
 
@@ -204,15 +202,15 @@ local function key_map(key, mapping)
 	})
 end
 
-function M.setup()
+function M.setup(args)
 	-- args = vim.tbl_deep_extend("force", DEFAULTS, args)
 	args = DEFAULTS
-	-- vim.api.nvim_create_user_command("TidalLaunch", function()
-	-- 	launch_tidal(args.boot)
-	-- end, { desc = "launches Tidal instance, including sclang if so configured" })
-	-- vim.api.nvim_create_user_command("TidalExit", exit_tidal, { desc = "quits Tidal instance" })
+	vim.api.nvim_create_user_command("TidalLaunch", function()
+		launch_modal(args.boot)
+	end, { desc = "launches Modal instance, including sclang if so configured" })
+	vim.api.nvim_create_user_command("ModalEmodalt", exit, { desc = "quits modal instance" })
 	vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
-		pattern = { "*.xi" },
+		pattern = { "*.modal" },
 		callback = function()
 			vim.cmd("set ft=yue")
 			for key, value in pairs(args.keymaps) do

@@ -1,2 +1,3 @@
-# xi.nvim
-neovim plugin for project xi
+# modal.nvim
+
+neovim plugin for project modal
