@@ -4,52 +4,52 @@ local yue = require("yue")
 
 -- vim.highlight.range(0, 0, "", { 0, 0 }, { 1, 1 })
 --
--- local DEFAULTS = {
--- 	boot = {
--- 		tidal = {
--- 			file = vim.api.nvim_get_runtime_file("BootTidal.hs", false)[1],
--- 			args = {},
--- 		},
--- 		sclang = {
--- 			file = vim.api.nvim_get_runtime_file("BootSuperDirt.scd", false)[1],
--- 			enabled = false,
--- 		},
--- 		split = "v",
--- 	},
--- 	keymaps = {
--- 		send_line = "<C-L>",
--- 		send_node = "<Leader>s",
--- 		send_visual = "<C-L>",
--- 		hush = "<C-H>",
--- 	},
--- }
+local DEFAULTS = {
+	-- boot = {
+	-- 	tidal = {
+	-- 		file = vim.api.nvim_get_runtime_file("BootTidal.hs", false)[1],
+	-- 		args = {},
+	-- 	},
+	-- 	sclang = {
+	-- 		file = vim.api.nvim_get_runtime_file("BootSuperDirt.scd", false)[1],
+	-- 		enabled = false,
+	-- 	},
+	-- 	split = "v",
+	-- },
+	keymaps = {
+		send_line = "<C-l>",
+		send_node = "<Leader>s",
+		send_visual = "<C-l>",
+		hush = "<C-H>",
+	},
+}
 
--- local KEYMAPS = {
--- 	send_line = {
--- 		mode = "n",
--- 		action = "Vy<cmd>lua require('tidal').send_reg()<CR><ESC>",
--- 		description = "send line to Tidal",
--- 	},
--- 	send_node = {
--- 		mode = "n",
--- 		action = function()
--- 			T.send_node()
--- 		end,
--- 		description = "send treesitter node to Tidal",
--- 	},
--- 	send_visual = {
--- 		mode = "v",
--- 		action = "y<cmd>lua require('tidal').send_reg()<CR>",
--- 		description = "send selection to Tidal",
--- 	},
--- 	hush = {
--- 		mode = "n",
--- 		action = function()
--- 			T.send("hush")
--- 		end,
--- 		description = "send 'hush' to Tidal",
--- 	},
--- }
+local KEYMAPS = {
+	-- 	send_line = {
+	-- 		mode = "n",
+	-- 		action = "Vy<cmd>lua require('tidal').send_reg()<CR><ESC>",
+	-- 		description = "send line to Tidal",
+	-- 	},
+	-- 	send_node = {
+	-- 		mode = "n",
+	-- 		action = function()
+	-- 			T.send_node()
+	-- 		end,
+	-- 		description = "send treesitter node to Tidal",
+	-- 	},
+	send_visual = {
+		mode = "v",
+		action = "y<cmd>lua require('nvim-xi').send_reg()<CR>",
+		description = "send selection to Tidal",
+	},
+	-- 	hush = {
+	-- 		mode = "n",
+	-- 		action = function()
+	-- 			T.send("hush")
+	-- 		end,
+	-- 		description = "send 'hush' to Tidal",
+	-- 	},
+}
 
 local state = {
 	launched = false,
@@ -109,11 +109,14 @@ function M.send_all()
 end
 
 -- TODO: send visual
--- function T.send_reg(register)
---   if not register then register = "" end
---   local text = table.concat(vim.fn.getreg(register, 1, true), '\n')
---   T.send(text)
--- end
+function M.send_reg(register)
+	print("tppp")
+	if not register then
+		register = ""
+	end
+	local text = table.concat(vim.fn.getreg(register, 1, true), "\n")
+	send(text)
+end
 
 local function boot_xi(args)
 	if state.xi then
@@ -193,23 +196,30 @@ end
 -- end
 
 -- TODO:
--- function M.setup(args)
--- args = vim.tbl_deep_extend("force", DEFAULTS, args)
--- vim.api.nvim_create_user_command('TidalLaunch',
---   function() launch_tidal(args.boot) end,
---   { desc = "launches Tidal instance, including sclang if so configured"})
--- vim.api.nvim_create_user_command('TidalExit',
---   exit_tidal,
---   { desc = "quits Tidal instance"})
--- vim.api.nvim_create_autocmd({"BufEnter", "BufWinEnter"}, {
---   pattern = {"*.tidal"},
---   callback = function ()
---     vim.cmd 'set ft=haskell'
---     for key, value in pairs(args.keymaps) do
---       key_map(key, value)
---     end
---   end
--- })
--- end
+
+local function key_map(key, mapping)
+	vim.keymap.set(KEYMAPS[key].mode, mapping, KEYMAPS[key].action, {
+		buffer = true,
+		desc = KEYMAPS[key].description,
+	})
+end
+
+function M.setup()
+	-- args = vim.tbl_deep_extend("force", DEFAULTS, args)
+	args = DEFAULTS
+	-- vim.api.nvim_create_user_command("TidalLaunch", function()
+	-- 	launch_tidal(args.boot)
+	-- end, { desc = "launches Tidal instance, including sclang if so configured" })
+	-- vim.api.nvim_create_user_command("TidalExit", exit_tidal, { desc = "quits Tidal instance" })
+	vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+		pattern = { "*.xi" },
+		callback = function()
+			vim.cmd("set ft=yue")
+			for key, value in pairs(args.keymaps) do
+				key_map(key, value)
+			end
+		end,
+	})
+end
 
 return M
