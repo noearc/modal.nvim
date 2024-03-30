@@ -3,17 +3,17 @@ local M = {}
 local yue = require("yue")
 
 local DEFAULTS = {
-	-- boot = {
-	-- 	modal = {
-	-- 	mo	file = vim.api.nvim_get_runtime_file("BootTidal.hs", false)[1],
-	-- 		args = {},
-	-- 	},
-	-- 	sclang = {
-	-- 		file = vim.api.nvim_get_runtime_file("BootSuperDirt.scd", false)[1],
-	-- 		enabled = false,
-	-- 	},
-	-- 	split = "v",
-	-- },
+	boot = {
+		-- 	modal = {
+		-- 	mo	file = vim.api.nvim_get_runtime_file("BootTidal.hs", false)[1],
+		-- 		args = {},
+		-- 	},
+		sclang = {
+			file = vim.api.nvim_get_runtime_file("BootSuperDirt.scd", false)[1],
+			enabled = false,
+		},
+		-- split = "v",
+	},
 	keymaps = {
 		send_line = "<C-l>",
 		send_node = "<Leader>s",
@@ -130,7 +130,7 @@ local function boot_modal(args)
 		return
 	end
 	state.modal_process = vim.fn.termopen("modal", {
-		on_emodalt = function()
+		on_exit = function()
 			if #vim.fn.win_findbuf(state.modal) > 0 then
 				vim.api.nvim_win_close(vim.fn.win_findbuf(state.modal)[1], true)
 			end
@@ -153,8 +153,8 @@ local function boot_sclang(args)
 		boot_sclang(args)
 		return
 	end
-	state.sclang_process = vim.fn.termopen("sclang", {
-		on_emodalt = function()
+	state.sclang_process = vim.fn.termopen("sclang " .. args.file, {
+		on_exit = function()
 			if #vim.fn.win_findbuf(state.sclang) > 0 then
 				vim.api.nvim_win_close(vim.fn.win_findbuf(state.sclang)[1], true)
 			end
@@ -173,7 +173,7 @@ local function launch_modal(args)
 	vim.cmd(args.split == "v" and "vsplit" or "split")
 	boot_modal(args.modal)
 	vim.cmd(args.split == "v" and "split" or "vsplit")
-	boot_sclang({})
+	boot_sclang(args.sclang)
 	vim.api.nvim_set_current_win(current_win)
 	state.launched = true
 	Lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
@@ -205,10 +205,10 @@ end
 function M.setup(args)
 	-- args = vim.tbl_deep_extend("force", DEFAULTS, args)
 	args = DEFAULTS
-	vim.api.nvim_create_user_command("TidalLaunch", function()
+	vim.api.nvim_create_user_command("ModalLaunch", function()
 		launch_modal(args.boot)
 	end, { desc = "launches Modal instance, including sclang if so configured" })
-	vim.api.nvim_create_user_command("ModalEmodalt", exit, { desc = "quits modal instance" })
+	vim.api.nvim_create_user_command("ModalExit", exit, { desc = "quits modal instance" })
 	vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
 		pattern = { "*.modal" },
 		callback = function()
