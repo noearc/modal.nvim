@@ -9,6 +9,7 @@ local DEFAULTS = {
 		-- 		args = {},
 		-- 	},
 		sclang = {
+			use_boot_file = true,
 			file = vim.api.nvim_get_runtime_file("BootSuperDirt.scd", false)[1],
 			enabled = false,
 		},
@@ -153,7 +154,11 @@ local function boot_sclang(args)
 		boot_sclang(args)
 		return
 	end
-	state.sclang_process = vim.fn.termopen("sclang " .. args.file, {
+	local sclang = "sclang"
+	if args.use_boot_file then
+		sclang = "sclang " .. args.file
+	end
+	state.sclang_process = vim.fn.termopen(sclang, {
 		on_exit = function()
 			if #vim.fn.win_findbuf(state.sclang) > 0 then
 				vim.api.nvim_win_close(vim.fn.win_findbuf(state.sclang)[1], true)
@@ -203,8 +208,7 @@ local function key_map(key, mapping)
 end
 
 function M.setup(args)
-	-- args = vim.tbl_deep_extend("force", DEFAULTS, args)
-	args = DEFAULTS
+	args = vim.tbl_deep_extend("force", DEFAULTS, args)
 	vim.api.nvim_create_user_command("ModalLaunch", function()
 		launch_modal(args.boot)
 	end, { desc = "launches Modal instance, including sclang if so configured" })
