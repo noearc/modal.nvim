@@ -1,5 +1,4 @@
 local M = {}
-local Job = require("plenary.job")
 
 local DEFAULTS = {
 	boot = {
@@ -61,16 +60,18 @@ local state = {
 	launched = false,
 	modal = nil,
 	sclang = nil,
+	server = nil,
 	modal_process = nil,
+	server_process = nil,
 	sclang_process = nil,
 }
 
 function M.send(text)
+	-- print(state.repl_process)
 	-- if not state.modal_process then
 	-- 	print("no proc")
 	-- 	return
 	-- end
-	-- text = yue.to_lua(text)
 	vim.api.nvim_chan_send(state.repl_process, text .. "\n")
 end
 
@@ -136,27 +137,37 @@ local function boot_modal(args)
 		boot_modal(args)
 		return
 	end
-	-- state.modal_process = vim.fn.termopen("mods", {
-	-- 	on_exit = function()
+
+	-- vim.schedule_wrap(function()
+	-- 	state.modal_process = vim.system({ "mods" }, { text = true }, function()
 	-- 		if #vim.fn.win_findbuf(state.modal) > 0 then
 	-- 			vim.api.nvim_win_close(vim.fn.win_findbuf(state.modal)[1], true)
 	-- 		end
 	-- 		vim.api.nvim_buf_delete(state.modal, {})
 	-- 		state.modal = nil
 	-- 		state.modal_process = nil
-	-- 	end,
-	-- })
-	state.modal_process = Job:new({
-		command = "mods",
-		args = { 9000 }, -- FIND avail
+	-- 	end)
+	-- end)
+
+	state.modal_process = vim.fn.termopen("modal", {
 		on_exit = function()
-			print("server quit!")
+			if #vim.fn.win_findbuf(state.modal) > 0 then
+				vim.api.nvim_win_close(vim.fn.win_findbuf(state.modal)[1], true)
+			end
+			vim.api.nvim_buf_delete(state.modal, {})
+			state.modal = nil
+			state.modal_process:shutdown()
 		end,
 	})
-	print(vim.inspect(state.modal_process))
-	state.modal_process:start()
+end
 
-	state.repl_process = vim.fn.termopen("modal", {
+local function boot_server(args)
+	if not state.server then
+		state.server = vim.api.nvim_create_buf(false, false)
+		boot_server(args)
+		return
+	end
+	state.server_process = vim.fn.termopen("mods", {
 		on_exit = function()
 			if #vim.fn.win_findbuf(state.modal) > 0 then
 				vim.api.nvim_win_close(vim.fn.win_findbuf(state.modal)[1], true)
@@ -201,6 +212,7 @@ local function launch_modal(args)
 	if state.launched then
 		return
 	end
+	boot_server()
 	vim.cmd(args.split == "v" and "vsplit" or "split")
 	boot_modal(args.modal)
 	-- vim.cmd(args.split == "v" and "split" or "vsplit")
@@ -216,8 +228,8 @@ local function exit()
 		return
 	end
 	if state.modal_process then
-		-- vim.fn.jobstop(state.modal_process)
-		state.modal_process:shutdown()
+		vim.fn.jobstop(state.modal_process)
+		-- state.modal_process:shutdown()
 	end
 	if state.sclang_process then
 		vim.fn.jobstop(state.sclang_process)
